@@ -529,25 +529,26 @@ void TempTest(void)
     {
       ucTemp[0] = 0x00;
       I2CWrite(temp_addr, ucTemp, 1); // read temp register
-      delay(9); // wait for conversion we just triggered
-      I2CRead(temp_addr, ucTemp, 2); // read temp+humidity
+      delay(15); // wait for conversion we just triggered
+      I2CRead(temp_addr, ucTemp, 4); // read temp+humidity
       T = (ucTemp[0]<<8) + ucTemp[1];
-//      sprintf(szTemp,"T = %d, 0=%02x,1=%02x", T, ucTemp[0], ucTemp[1]);
-//      spilcdWriteString(0,32,szTemp,0xf800,0,FONT_NORMAL, 1);
-      ucTemp[0] = 0x01;
-      I2CWrite(temp_addr, ucTemp, 1); // read humidity register
-      delay(9); // wait for conversion
-      I2CRead(temp_addr, ucTemp, 2); // read humidity
-      H = (ucTemp[0]*256) + ucTemp[1];
+      H = (ucTemp[2]*256) + ucTemp[3];
       // convert to percent
       H = (H * 100) >> 16;
       T = ((T * 1650) >> 16) - 400; // 10x temp
+      T -= 84; // adjustment that seems to give a more accurate result
       sprintf(szTemp,"Humidity: %d%%", H); // display humidity value
       spilcdWriteString(0,0,szTemp,0xffff,0,FONT_NORMAL,1);
       sprintf(szTemp,"Air Temp = %d.%dC", (int)(T/10), (int)(T % 10)); // display temperature value
       spilcdWriteString(0,8,szTemp,0xffff,0,FONT_NORMAL, 1);
-      sprintf(szTemp,"CPU Temp = %dF", temprature_sens_read()); // display CPU temperature
-      spilcdWriteString(0,16,szTemp,0xffff,0,FONT_NORMAL, 1);
+      T = temprature_sens_read();
+      if (T == 128) // invalid, must not be present
+         spilcdWriteString(0,16,(char *)"CPU Temp = N/A", 0xffff,0,FONT_NORMAL,1);
+      else
+      {
+        sprintf(szTemp,"CPU Temp = %dF", T); // display CPU temperature
+        spilcdWriteString(0,16,szTemp,0xffff,0,FONT_NORMAL, 1);
+      }
     }
 } /* TempTest() */
 
@@ -559,6 +560,7 @@ int iFrame = 0;
 int16_t butts = 0;
 
   spilcdFill(0,1); // fill to black
+  spilcdWriteString(0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_SMALL, 1);
   while (1)
   {
     iFrame++;
@@ -642,7 +644,7 @@ void setup() {
   delay(50); // need this small delay or the vlx.begin will hang
   LIS3DHInit(0x19);
   vlx.begin();
-  spilcdInit(LCD_ST7735S_B, 1, 0, 32000000, 4, 21, 22, 26, -1, 23, 18); // Mike's coin cell pin numbering
+  spilcdInit(LCD_ST7735S_B, 1, 1, 0, 32000000, 4, 21, 22, 26, -1, 23, 18); // Mike's coin cell pin numbering
   spilcdSetOrientation(LCD_ORIENTATION_ROTATED);
   spilcdAllocBackbuffer();
 //  touchAttachInterrupt(T7, gotTouch1, threshold);
