@@ -15,8 +15,8 @@ uint8_t temprature_sens_read();
 uint8_t temprature_sens_read();
 
 Adafruit_VL53L0X vlx = Adafruit_VL53L0X();
- const char* ssid       = "FASTWEB-D5ECB9_RPT";  
- const char* password   = "9M2Z4W33J7";  
+ const char* ssid       = "MYROUTER";  
+ const char* password   = "MYPASSWORD";  
 
 const char *szNames[]  = {"Unknown","SSD1306","SH1106","VL53L0X","BMP180", "BMP280","BME280",
                 "MPU-60x0", "MPU-9250", "MCP9808","LSM6DS3", "ADXL345", "ADS1115","MAX44009",
