@@ -3,15 +3,10 @@
 #include <WiFi.h>
 #include <Wire.h>
 #include <BitBang_I2C.h>
-// Had to disable this code because the library makes the sketch too big to fit in FLASH
-//#define BLE_SCAN
-
-#ifdef BLE_SCAN
 #include <BLEDevice.h>
 
 BLEScan *pBLEScan;
 BLEScanResults foundDevices;
-#endif
 
 //#define TRY_LOGIN
 
@@ -292,11 +287,11 @@ uint16_t pal[4] = {0xffe0,0xf81f,0x1f,0xffff};
   spilcdWriteString(44,0,(char *)"Main Menu", 0x6ff,-1,FONT_NORMAL, 0);
   spilcdWriteString(0,16,(char *)"I2C Scan", (iMenuItem == 0) ? iFG:iBG,-1,FONT_NORMAL, 0);
   spilcdWriteString(0,24,(char *)"WiFi Scan", (iMenuItem == 1) ? iFG:iBG,-1,FONT_NORMAL, 0);
-//  spilcdWriteString(0,32,(char *)"BLE Scan", (iMenuItem == 2) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,32,(char *)"Button Test", (iMenuItem == 2) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,40,(char *)"Proximity Test", (iMenuItem == 3) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,48,(char *)"IMU Test", (iMenuItem == 4) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,56,(char *)"Temp/Humidity Test", (iMenuItem == 5) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdWriteString(0,32,(char *)"BLE Scan", (iMenuItem == 2) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdWriteString(0,40,(char *)"Button Test", (iMenuItem == 3) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdWriteString(0,48,(char *)"Proximity Test", (iMenuItem == 4) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdWriteString(0,56,(char *)"IMU Test", (iMenuItem == 5) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdWriteString(0,64,(char *)"Temp/Humidity Test", (iMenuItem == 6) ? iFG:iBG,-1,FONT_NORMAL, 0);
   spilcdRotateBitmap(ucBombMask, u8Temp, 1, 40, 40, 8, 20, 20, i % 360);
   for (j=0; j<4; j++)
   {
@@ -631,28 +626,53 @@ int iTimeout = 0;
   }
 } /* WiFiScan() */
 
-#ifdef BLE_SCAN
-class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+static BLEAddress *Server_BLE_Address;
+static char Scanned_BLE_Name[10][32];
+static char Scanned_BLE_Address[10][32];
+static int iBLECount;
+
+// Called for each device found during a BLE scan by the client
+class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks
+{
     void onResult(BLEAdvertisedDevice advertisedDevice) {
-      Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
+//      Serial.printf("Scan Result: %s \n", advertisedDevice.toString().c_str());
+//      if (strcmp(Band_BLE_Name.c_str(), advertisedDevice.getName().c_str()) == 0) { // this is what we want
+        Server_BLE_Address = new BLEAddress(advertisedDevice.getAddress());
+        strcpy(Scanned_BLE_Address[iBLECount], Server_BLE_Address->toString().c_str());
+        strcpy(Scanned_BLE_Name[iBLECount], advertisedDevice.getName().c_str());
+        delete Server_BLE_Address;
+        iBLECount++;
+//      }
     }
 };
-#endif
 
 void BLEScan()
 {
-#ifdef BLE_SCAN
-  Serial.println("Scanning...");
+char szTemp[64];
+int i;
+
+  iBLECount = 0;
+  spilcdFill(0, 1);
+  spilcdWriteString(0,0,(char *)"Scanning for BLE... ", 0xffff,0,FONT_NORMAL, 1);
 
   BLEDevice::init("");
   pBLEScan = BLEDevice::getScan(); //create new scan
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
   pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
   foundDevices = pBLEScan->start(10); // scan for 10 seconds
-  Serial.print("Devices found: ");
-  Serial.println(foundDevices.getCount());
-  Serial.println("Scan done!");
-#endif
+  sprintf(szTemp, "%d device(s) found  ", iBLECount);
+  spilcdWriteString(0,0,(char *)"Scanning for BLE... ", 0xffff,0,FONT_NORMAL, 1);
+  for (i=0; i<iBLECount; i++)
+  {
+    sprintf(szTemp, "%s,%s", Scanned_BLE_Address[i], Scanned_BLE_Name[i]);
+    spilcdWriteString(0,(i+1)*8,szTemp, 0x6e0,0,FONT_SMALL, 1);
+  }
+  pBLEScan->stop(); // stop scanning
+  spilcdWriteString(0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_SMALL, 1);
+  while (GetButtons() == 0)
+  {
+    delay(10);
+  }
 } /* BLEScan() */
 
 void MainMenu(void)
@@ -684,19 +704,19 @@ int iFrame = 0;
          case 1:
            WiFiScan();
            break;
-//         case 2:
-//           BLEScan();
-//           break;
          case 2:
-           ButtonTest();
+           BLEScan();
            break;
          case 3:
+           ButtonTest();
+           break;
+         case 4:
           TOFTest();
           break;
-         case 4:
+         case 5:
           IMUTest();
           break;
-         case 5:
+         case 6:
           TempTest();
           break;
        }
