@@ -3,6 +3,16 @@
 #include <WiFi.h>
 #include <Wire.h>
 #include <BitBang_I2C.h>
+// Had to disable this code because the library makes the sketch too big to fit in FLASH
+//#define BLE_SCAN
+
+#ifdef BLE_SCAN
+#include <BLEDevice.h>
+
+BLEScan *pBLEScan;
+BLEScanResults foundDevices;
+#endif
+
 //#define TRY_LOGIN
 
 #ifdef __cplusplus
@@ -15,8 +25,8 @@ uint8_t temprature_sens_read();
 uint8_t temprature_sens_read();
 
 Adafruit_VL53L0X vlx = Adafruit_VL53L0X();
- const char* ssid       = "FASTWEB-D5ECB9_RPT";  
- const char* password   = "9M2Z4W33J7";  
+ const char* ssid       = "MYROUTER";  
+ const char* password   = "MYPASSWORD";  
 
 const char *szNames[]  = {"Unknown","SSD1306","SH1106","VL53L0X","BMP180", "BMP280","BME280",
                 "MPU-60x0", "MPU-9250", "MCP9808","LSM6DS3", "ADXL345", "ADS1115","MAX44009",
@@ -281,10 +291,12 @@ uint16_t pal[4] = {0xffe0,0xf81f,0x1f,0xffff};
   spilcdRectangle(0, 0, WIDTH, HEIGHT, 0x0000, 0xf800, 1, 0);
   spilcdWriteString(44,0,(char *)"Main Menu", 0x6ff,-1,FONT_NORMAL, 0);
   spilcdWriteString(0,16,(char *)"I2C Scan", (iMenuItem == 0) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,24,(char *)"Button Test", (iMenuItem == 1) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,32,(char *)"Proximity Test", (iMenuItem == 2) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,40,(char *)"IMU Test", (iMenuItem == 3) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,48,(char *)"Temp/Humidity Test", (iMenuItem == 4) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdWriteString(0,24,(char *)"WiFi Scan", (iMenuItem == 1) ? iFG:iBG,-1,FONT_NORMAL, 0);
+//  spilcdWriteString(0,32,(char *)"BLE Scan", (iMenuItem == 2) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdWriteString(0,32,(char *)"Button Test", (iMenuItem == 2) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdWriteString(0,40,(char *)"Proximity Test", (iMenuItem == 3) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdWriteString(0,48,(char *)"IMU Test", (iMenuItem == 4) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdWriteString(0,56,(char *)"Temp/Humidity Test", (iMenuItem == 5) ? iFG:iBG,-1,FONT_NORMAL, 0);
   spilcdRotateBitmap(ucBombMask, u8Temp, 1, 40, 40, 8, 20, 20, i % 360);
   for (j=0; j<4; j++)
   {
@@ -573,6 +585,76 @@ int16_t butts = 0;
   }
 } /* TOFTest() */
 
+#define MAX_APS 8
+void WiFiScan()
+{
+String ssidList[MAX_APS]; // top SSIDs found in the area
+uint8_t ssidEncrypt[MAX_APS];
+int ssidRSSI[MAX_APS];
+int i, j, n, iIndex = 0;
+int bChanged;
+int iFG, iBG;
+char szTemp[64];
+uint8_t u8Butts, u8OldButts;
+int iTimeout = 0;
+
+  spilcdFill(0, 1);
+  spilcdWriteString(0,0,(char *)"Scanning Wifi...", 0xffff,0,FONT_NORMAL, 1);
+
+  // Find nearby networks (up to 9)
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect(); // make sure we're not connected to a network
+  delay(100);
+  // workaround for a bug which doesn't power wifi unless we try to connect to something
+//  WiFi.begin();
+  // WiFi.scanNetworks will return the number of networks found
+//  WiFi.scanDelete(); // delete the last scan result from memory
+  n = WiFi.scanNetworks();
+  sprintf(szTemp,"Found: %d", n);
+  if (n > MAX_APS)
+    strcat(szTemp, (char *)" (showing top 8)");
+  if (n > MAX_APS) n = MAX_APS; // we only care about the N strongest
+  spilcdFill(0,1);
+  spilcdWriteString(0,0,szTemp, 0xffff,0, FONT_NORMAL, 1);
+  for (i = 0; i < n; ++i)
+  {
+     ssidList[i] = WiFi.SSID(i);
+     ssidEncrypt[i] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+     ssidRSSI[i] = WiFi.RSSI(i);
+     sprintf(szTemp, "%s, %c, %ddBm", ssidList[i].c_str(), (ssidEncrypt[i]) ? '*':' ',ssidRSSI[i]);
+     spilcdWriteString(0,8+(i*8), szTemp, 0x6e0,0,FONT_SMALL, 1);
+  } // for each ssid found
+  spilcdWriteString(0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_SMALL, 1);
+  while (GetButtons() == 0)
+  {
+    delay(10);
+  }
+} /* WiFiScan() */
+
+#ifdef BLE_SCAN
+class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+    void onResult(BLEAdvertisedDevice advertisedDevice) {
+      Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
+    }
+};
+#endif
+
+void BLEScan()
+{
+#ifdef BLE_SCAN
+  Serial.println("Scanning...");
+
+  BLEDevice::init("");
+  pBLEScan = BLEDevice::getScan(); //create new scan
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
+  foundDevices = pBLEScan->start(10); // scan for 10 seconds
+  Serial.print("Devices found: ");
+  Serial.println(foundDevices.getCount());
+  Serial.println("Scan done!");
+#endif
+} /* BLEScan() */
+
 void MainMenu(void)
 {
 int iButts, iMenuItem = 0;
@@ -594,25 +676,29 @@ int iFrame = 0;
      }
      else if (iButts & 4) // action
      {
-       if (iMenuItem == 0)
-       {
+      switch (iMenuItem)
+      {
+         case 0:
           I2CDetect();
-       }
-       else if (iMenuItem == 1)
-       {
-          ButtonTest();
-       }
-       else if (iMenuItem == 2) // TOF Test
-       {
+          break;
+         case 1:
+           WiFiScan();
+           break;
+//         case 2:
+//           BLEScan();
+//           break;
+         case 2:
+           ButtonTest();
+           break;
+         case 3:
           TOFTest();
-       }
-       else if (iMenuItem == 3) // IMU Test
-       {
+          break;
+         case 4:
           IMUTest();
-       }
-       else if (iMenuItem == 4) // temp/humidity test
-       {
+          break;
+         case 5:
           TempTest();
+          break;
        }
      }
      iButts = 0; // don't let it double press on even frames
