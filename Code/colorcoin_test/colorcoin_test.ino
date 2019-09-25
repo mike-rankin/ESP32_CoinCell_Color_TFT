@@ -661,7 +661,7 @@ int i;
   pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
   foundDevices = pBLEScan->start(10); // scan for 10 seconds
   sprintf(szTemp, "%d device(s) found  ", iBLECount);
-  spilcdWriteString(0,0,(char *)"Scanning for BLE... ", 0xffff,0,FONT_NORMAL, 1);
+  spilcdWriteString(0,0,szTemp, 0xffff,0,FONT_NORMAL, 1);
   for (i=0; i<iBLECount; i++)
   {
     sprintf(szTemp, "%s,%s", Scanned_BLE_Address[i], Scanned_BLE_Name[i]);
@@ -686,7 +686,7 @@ int iFrame = 0;
      DrawMainMenu(iMenuItem);
      if (iFrame & 1)
        iButts = GetButtons();
-     if (iButts & 1 && iMenuItem < 4) // first button = down
+     if (iButts & 1 && iMenuItem < 6) // first button = down
      {
         iMenuItem++;
      }
