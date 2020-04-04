@@ -1,3 +1,13 @@
+//Tools/Board: ESP32 Dev Board
+//Search Sketch/Include Library/Manage Libraries:
+//Install Adafruit_GFX
+//Install Adafruit_ST7735
+//Install Adafruit_Sensor
+//Install Adafruit_VL53L0X
+//Install ClosedCube_HDC1080
+//Install Adafruit_LIS3DH
+
+
 /**************************************************************************
 To get rid of the static on the bottom right of the lcd
 in Adafruit_ST7735_and_ST7789_Library modify the Adafruit_ST7735.cpp file
@@ -6,7 +16,7 @@ under void Adafruit_ST7735::initR(uint8_t options) to
     _colstart = 24;  //originally 24 ,26 works better
     _rowstart = 2;   //originally 0 ,4 works well
 
-To get the Accel to work modify Adafruit_LIS3DH.h and set the i2c address to 0x19   
+To get the Accel to work possibly modify Adafruit_LIS3DH.h and set the i2c address to 0x19   
     
 // Touch Pads on the bottom
 // Touch Pad1 = GPIO27, T7
