@@ -4,9 +4,15 @@
 #include <Wire.h>
 #include <BitBang_I2C.h>
 #include <BLEDevice.h>
+#include <esp32_gamepad.h>
 
 BLEScan *pBLEScan;
 BLEScanResults foundDevices;
+static uint8_t txBuffer[4096];
+SS_GAMEPAD gp;
+BBI2C i2c;
+uint8_t devAddr[6];
+volatile bool bChanged, bConnected;
 
 //#define TRY_LOGIN
 
@@ -28,7 +34,7 @@ const char *szNames[]  = {"Unknown","SSD1306","SH1106","VL53L0X","BMP180", "BMP2
                 "MAG3110", "CCS811", "HTS221", "LPS25H", "LSM9DS1","LM8330", "DS3231", "LIS3DH",
                 "LIS3DSH","INA219","SHT3X","HDC1080"};
 
-static uint8_t imu_addr, vlx_addr, temp_addr;
+static uint8_t imu_addr, temp_addr;
 
 // Touch Pad1 = GPIO27, T7
 // Touch Pad2 = GPIO12, T5 
@@ -64,6 +70,19 @@ uint8_t ucBombMask[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
   0x00,0x00};
 
+void SS_Callback(int iEvent, SS_GAMEPAD *pGamepad)
+{
+  if (iEvent == EVENT_DISCONNECT)
+     bConnected = false;
+  else if (iEvent == EVENT_CONNECT)
+     bConnected = true;
+  else
+  {
+    bChanged = 1;
+    memcpy(&gp, pGamepad, sizeof(SS_GAMEPAD));
+  }
+} /* SS_Callback() */
+
 void LIS3DHInit(byte bAddr)
 {
 uint8_t uc[4];
@@ -71,47 +90,47 @@ uint8_t uc[4];
    imu_addr = bAddr;
    uc[0] = 0x20; // CTRL_REG1
    uc[1] = 0x77; // Turn on the sensor with ODR = 400Hz normal mode.
-   I2CWrite(imu_addr, uc, 2);
+   I2CWrite(&i2c, imu_addr, uc, 2);
 // High res & BDU enabled
    uc[0] = 0x23; // CTRL_REG4
    uc[1] = 0x88;
-   I2CWrite(imu_addr, uc, 2);
+   I2CWrite(&i2c, imu_addr, uc, 2);
    // DRDY on INT1
    uc[0] = 0x22; // CTRL_REG3
    uc[1] = 0x10;
-   I2CWrite(imu_addr, uc, 2);
+   I2CWrite(&i2c, imu_addr, uc, 2);
 
  // enable adcs
    uc[0] = 0x1f; // TEMP_CFG_REG
    uc[1] = 0x80;
-   I2CWrite(imu_addr, uc, 2);
+   I2CWrite(&i2c, imu_addr, uc, 2);
 
    return;
    
    uc[0] = 0x21; // CTRL_REG2
    uc[1] = 0x01; // High-pass filter (HPF) enabled with 0.2Hz cut-off frequency for INT1 (AOI1) interrupt generation only.
-   I2CWrite(imu_addr, uc, 2);
+   I2CWrite(&i2c, imu_addr, uc, 2);
    uc[0] = 0x22; // CTRL_REG3
    uc[1] = 0x40; // ACC AOI1 interrupt signal is routed to INT1 pin.
-   I2CWrite(imu_addr, uc, 2);
+   I2CWrite(&i2c, imu_addr, uc, 2);
    uc[0] = 0x23; // CTRL_REG4
    uc[1] = 0x88; // Full Scale = +/-2 g with BDU and HR bits enabled.
-   I2CWrite(imu_addr, uc, 2);
+   I2CWrite(&i2c, imu_addr, uc, 2);
    uc[0] = 0x24; // CTRL_REG5
 //   uc[1] = 0x00; // INT1 pin is not latched, no need to read INT1_SRC to clear the int
    uc[1] = 0x08; // INT1 pin is latched; need to read the INT1_SRC register to clear the interrupt signal.   
-   I2CWrite(imu_addr, uc, 2); 
+   I2CWrite(&i2c, imu_addr, uc, 2); 
    // configurations for wakeup and motionless detection
    uc[0] = 0x32; // INT1_THS
    uc[1] = 0x02; // Threshold (THS) = 2LSBs * 15.625mg/LSB = 31.25mg.
-   I2CWrite(imu_addr, uc, 2);
+   I2CWrite(&i2c, imu_addr, uc, 2);
    uc[0] = 0x33; // INT1_DURATION
    uc[1] = 0x01; // Duration = 1LSBs * (1/10Hz) = 0.1s
-   I2CWrite(imu_addr, uc, 2);
+   I2CWrite(&i2c, imu_addr, uc, 2);
    uc[0] = 0x30; // INT1_CFG
    uc[1] = 0x15; // Enable XLIE, YLIE and ZLIE (low events) interrupt generation
 //   uc[1] = 0xaa; // Enable ZHIE, YHIE, XHIE (high events) interrupt generation
-   I2CWrite(imu_addr, uc, 2);
+   I2CWrite(&i2c, imu_addr, uc, 2);
 } /* LIS3DHInit() */
 
 void LIS3DHReadAccel(int16_t *X, int16_t *Y, int16_t *Z)
@@ -119,7 +138,7 @@ void LIS3DHReadAccel(int16_t *X, int16_t *Y, int16_t *Z)
 int i;
 uint8_t ucTemp[8];
 
-  i = I2CReadRegister(imu_addr, 0xa8, ucTemp, 6);
+  i = I2CReadRegister(&i2c, imu_addr, 0xa8, ucTemp, 6);
   if (i > 0)
   {
     *X = (ucTemp[1] << 8) + ucTemp[0];
@@ -137,7 +156,6 @@ int counter = 0;
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED && WiFi.status() != WL_CONNECT_FAILED) //if not connected to wifi
   {
-  char szTemp[32];
    spilcdWriteString(0,0,(char *)"Connecting to wifi", 0xffff,0, FONT_NORMAL, 1);
    spilcdWriteString(counter*8,8,(char *)".", 0xffff, 0, FONT_NORMAL, 1);
    delay(1500);
@@ -173,11 +191,11 @@ int iDevice, iCount;
   spilcdFill(0, 1);
   iCount = 0;
   spilcdWriteString(0,0,(char *)"Starting I2C Scan...", 0xffff,0,FONT_NORMAL, 1);
-  I2CScan(map); // get bitmap of connected I2C devices
+  I2CScan(&i2c, map); // get bitmap of connected I2C devices
   if (map[0] == 0xfe) // something is wrong with the I2C bus
   {
-    spilcdWriteString(0,8,"I2C pins are not correct", 0xf800,0,FONT_NORMAL,1);
-    spilcdWriteString(0,16,"or bad device; scan failed", 0xf800,0,FONT_NORMAL,1);
+    spilcdWriteString(0,8,(char *)"I2C pins are not correct", 0xf800,0,FONT_NORMAL,1);
+    spilcdWriteString(0,16,(char *)"or bad device; scan failed", 0xf800,0,FONT_NORMAL,1);
   }
   else
   {
@@ -186,7 +204,7 @@ int iDevice, iCount;
       if (map[i>>3] & (1 << (i & 7))) // device found
       {
         iCount++;
-        iDevice = I2CDiscoverDevice(i);
+        iDevice = I2CDiscoverDevice(&i2c, i);
         sprintf(szTemp, "Device at 0x%x: %s", i, szNames[iDevice]);
         spilcdWriteString(0,iCount*8,szTemp, 0xf81f,0,FONT_SMALL,1);
       }
@@ -210,20 +228,33 @@ int i, j;
 int iCounts[4] = {0};
 
   iState = 0;
-  // remove the 'flicker' of the buttons
-  for (j=0; j<5; j++)
+  if (bConnected) // use the gamepad
   {
-    for (i=0; i<4; i++)
-    {
-      if (touchRead(iButtons[i]) < BUTTON_THRESHOLD)
-        iCounts[i]++;
-    }
-    delay(4);
+    if (gp.u16Buttons & 0x20) // down
+      iState |= 1;
+    if (gp.u16Buttons & 0x10) // up
+      iState |= 2;
+    if (gp.u16Buttons & 4) // (1) button
+      iState |= 4;
+    if (gp.u16Buttons & 8) // (2) button
+      iState |= 8;
   }
-  for (i=0; i<4; i++)
-    if (iCounts[i] == 5)
-       iState |= (1<<i);
-       
+  else // use the touch buttons
+  {
+    // remove the 'flicker' of the buttons
+    for (j=0; j<5; j++)
+    {
+      for (i=0; i<4; i++)
+      {
+        if (touchRead(iButtons[i]) < BUTTON_THRESHOLD)
+          iCounts[i]++;
+      }
+      delay(4);
+    }
+    for (i=0; i<4; i++)
+      if (iCounts[i] == 5)
+         iState |= (1<<i);
+  }    
     // Test button bits for which ones changed from LOW to HIGH
     iPressed = (iState ^ iOldState) & iState; // tells us which ones just changed to 1
     iOldState = iState;
@@ -268,6 +299,7 @@ void DrawMainMenu(int iMenuItem)
 {
 static int i = 0;
 uint16_t iFG, iBG;
+char *pGP;
 uint8_t u8Temp[8*40]; // holds the rotated mask
 static int x[4], y[4], dx[4], dy[4];
 int j;
@@ -292,6 +324,11 @@ uint16_t pal[4] = {0xffe0,0xf81f,0x1f,0xffff};
   spilcdWriteString(0,48,(char *)"Proximity Test", (iMenuItem == 4) ? iFG:iBG,-1,FONT_NORMAL, 0);
   spilcdWriteString(0,56,(char *)"IMU Test", (iMenuItem == 5) ? iFG:iBG,-1,FONT_NORMAL, 0);
   spilcdWriteString(0,64,(char *)"Temp/Humidity Test", (iMenuItem == 6) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  if (bConnected)
+     pGP = (char *)"Gamepad: disconnect";
+  else
+     pGP = (char *)"Gamepad: connect";
+  spilcdWriteString(0,72,pGP, (iMenuItem == 7) ? iFG:iBG,-1,FONT_NORMAL, 0);
   spilcdRotateBitmap(ucBombMask, u8Temp, 1, 40, 40, 8, 20, 20, i % 360);
   for (j=0; j<4; j++)
   {
@@ -377,10 +414,10 @@ void IMUTest(void)
 int16_t x, y, z;
 int32_t v2; // Velocity squared
 int16_t ax, ay, az;
-signed int        oldidx, newidx;
+//signed int        oldidx, newidx;
 signed int        newx, newy;
 signed int        x1, y1, x2, y2;
-int i, j;
+int i;
 uint16_t *pBitmap = spilcdGetBuffer();
 uint16_t u16Flags[5]; // divide the display into 16x16 blocks for quicker refresh
 int iFrame = 0;
@@ -400,13 +437,21 @@ int iFrame = 0;
     {
       spilcdShowBuffer(0,0,WIDTH,HEIGHT);
     }
-    LIS3DHReadAccel(&x, &y, &z);
-    ax = x / 512; // Transform accelerometer axes
-    ay = -y / 512;      // to grain coordinate space
-    az = abs(z) / 2048; // Random motion factor
-    az = (az >= 3) ? 1 : 4 - az;      // Clip & invert
-    ax -= az;                         // Subtract motion factor from X, Y
-    ay -= az;
+    if (bConnected) // use the left analog stick to simulate gravity
+    {
+      ax = gp.iLJoyX / 4;
+      ay = gp.iLJoyY / 4;
+    }
+    else // use the accelerometer
+    {
+      LIS3DHReadAccel(&x, &y, &z);
+      ax = x / 512; // Transform accelerometer axes
+      ay = -y / 512;      // to grain coordinate space
+      az = abs(z) / 2048; // Random motion factor
+      az = (az >= 3) ? 1 : 4 - az;      // Clip & invert
+      ax -= az;                         // Subtract motion factor from X, Y
+      ay -= az;
+    }
   // Apply 2D accelerometer vector to grain velocities...
   //
   // Theory of operation:
@@ -530,14 +575,14 @@ void TempTest(void)
     ucTemp[0] = 0x02; // config register
     ucTemp[1] = 0x10; // temp+humidity, 14-bit resolution
     ucTemp[2] = 0x00;
-    I2CWrite(temp_addr, ucTemp, 3);
+    I2CWrite(&i2c, temp_addr, ucTemp, 3);
     delay(100);
     while (GetButtons() == 0)
     {
       ucTemp[0] = 0x00;
-      I2CWrite(temp_addr, ucTemp, 1); // read temp register
+      I2CWrite(&i2c, temp_addr, ucTemp, 1); // read temp register
       delay(15); // wait for conversion we just triggered
-      I2CRead(temp_addr, ucTemp, 4); // read temp+humidity
+      I2CRead(&i2c, temp_addr, ucTemp, 4); // read temp+humidity
       T = (ucTemp[0]<<8) + ucTemp[1];
       H = (ucTemp[2]*256) + ucTemp[3];
       // convert to percent
@@ -586,12 +631,8 @@ void WiFiScan()
 String ssidList[MAX_APS]; // top SSIDs found in the area
 uint8_t ssidEncrypt[MAX_APS];
 int ssidRSSI[MAX_APS];
-int i, j, n, iIndex = 0;
-int bChanged;
-int iFG, iBG;
+int i, n;
 char szTemp[64];
-uint8_t u8Butts, u8OldButts;
-int iTimeout = 0;
 
   spilcdFill(0, 1);
   spilcdWriteString(0,0,(char *)"Scanning Wifi...", 0xffff,0,FONT_NORMAL, 1);
@@ -675,10 +716,38 @@ int i;
   }
 } /* BLEScan() */
 
+// Connect or disconnect the gamepad
+void Gamepad(void)
+{
+  if (bConnected) // disconnect
+  {
+    SS_Disconnect();
+  }
+  else // connect it
+  {
+    spilcdFill(0,1);
+    spilcdWriteString(0,0,(char *)"Starting discovery...", 0xffff, 0, FONT_NORMAL, 1);
+    if (SS_Scan(6, devAddr))
+    {    
+      spilcdWriteString(0,16,(char *)"SS found!", 0x6e0, 0, FONT_STRETCHED, 1);
+      if (SS_Connect(devAddr))
+      {
+        spilcdWriteString(0,32,(char *)"Connected!", 0x6e0, 0, FONT_STRETCHED, 1);
+      }
+      else
+        spilcdWriteString(0,32,(char *)"Not Connected", 0xf800, 0, FONT_STRETCHED, 1);
+    }
+    else
+    {
+      spilcdWriteString(0,16,(char *)"Not found", 0xf800, 0, FONT_STRETCHED, 1);
+    }    
+    delay(2000);
+  }
+} /* Gamepad() */
+
 void MainMenu(void)
 {
 int iButts, iMenuItem = 0;
-char szTemp[32];
 int iFrame = 0;
   iButts = 0;
   while (1)
@@ -686,7 +755,7 @@ int iFrame = 0;
      DrawMainMenu(iMenuItem);
      if (iFrame & 1)
        iButts = GetButtons();
-     if (iButts & 1 && iMenuItem < 6) // first button = down
+     if (iButts & 1 && iMenuItem < 7) // first button = down
      {
         iMenuItem++;
      }
@@ -719,6 +788,9 @@ int iFrame = 0;
          case 6:
           TempTest();
           break;
+         case 7:
+          Gamepad();
+          break;
        }
      }
      iButts = 0; // don't let it double press on even frames
@@ -745,11 +817,18 @@ void gotTouch4()
 
 void setup() {
   Serial.begin(115200);
-  I2CInit(-1, -1, 400000L);
+  i2c.iSDA = -1;
+  i2c.iSCL = -1;
+  i2c.bWire = 1;
+  I2CInit(&i2c, 400000L);
   Wire.begin(SDA_PIN, SCL_PIN);
   delay(50); // need this small delay or the vlx.begin will hang
+  SS_Init();
+  SS_RegisterCallback(SS_Callback);
+  bConnected = false;
   LIS3DHInit(0x19);
   vlx.begin();
+  spilcdSetTXBuffer(txBuffer, 4096);
   spilcdInit(LCD_ST7735S_B, 1, 1, 0, 32000000, 4, 21, 22, 26, -1, 23, 18); // Mike's coin cell pin numbering
   spilcdSetOrientation(LCD_ORIENTATION_ROTATED);
   spilcdAllocBackbuffer();
@@ -761,8 +840,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-int i, j, iFG, x, y, r1, r2;
-uint32_t iTime;
+int i, j, x, y;
 
 #define WIDTH 160
 #define HEIGHT 80
@@ -772,7 +850,6 @@ MainMenu();
 //TryConnect();
 while (1) {};
 
-static int iLineOffset = 0;
 static int iColorOffset = 0;
 static int iColorDelta = 1;
 static int yLogo = 0;
