@@ -9,19 +9,20 @@ As expected, battery using a rechargeable 2450 coincell is very, very poor so I'
 
 Hardware design instead of software is my strength so at this state the only a few simple Arduino sketches are available that test out the hardware.
 
-Hardware on this dev board are:
--temperature/humidity sensor (HDC1080DMBT)
--Laser range sensor (VL53L0CXV0DH)
--accelerometer (LIS3DHTR)
--LiPo protection (DW01A)
--80x160 TFT LCD (ER-TFT0.96-1)
--3.3V LDO (HT7833)
--LiPo charger (SL4054ST25P)
--USB interface (CP2104N)
+Hardware on this dev board are:<br/>
+-temperature/humidity sensor (HDC1080DMBT)<br/>
+-Laser range sensor (VL53L0CXV0DH)<br/>
+-accelerometer (LIS3DHTR)<br/>
+-LiPo protection (DW01A)<br/>
+-80x160 TFT LCD (ER-TFT0.96-1)<br/>
+-3.3V LDO (HT7833)<br/>
+-LiPo charger (SL4054ST25P)<br/>
+-USB interface (CP2104N)<br/>
 
 If  you decice to purchase this project from Tindie XXXXXX you get an assembled and tested board with coin cell holder not soldered in place along with a microJST cable to use with an external battery.
 
-Board setup instructions:
+Board setup instructions:<br/>
+
 
 -install the latest Arduino IDE<br/>
 -File/Preferences in Additional Boards Manager URLs add: https://dl.espressif.com/dl/package_esp32_index.json<br/>
