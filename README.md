@@ -10,7 +10,6 @@ As expected, battery using a rechargeable 2450 coincell is very, very poor so I'
 Hardware design instead of software is my strength so at this state the only a few simple Arduino sketches are available that test out the hardware.
 
 **Hardware on this dev board is:<br/>**
-
 -temperature/humidity sensor (HDC1080DMBT)<br/>
 -Laser range sensor (VL53L0CXV0DH)<br/>
 -accelerometer (LIS3DHTR)<br/>
@@ -23,7 +22,6 @@ Hardware design instead of software is my strength so at this state the only a f
 If  you decice to purchase this project from Tindie XXXXXX you get an assembled and tested board with coin cell holder not soldered in place along with a microJST cable to use with an external battery.
 
 **Board setup instructions:<br/>**
-
 -install the latest Arduino IDE<br/>
 -File/Preferences in Additional Boards Manager URLs add: https://dl.espressif.com/dl/package_esp32_index.json<br/>
 -Tools/Board/Board Manager install esp32<br/>
