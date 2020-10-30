@@ -44,3 +44,4 @@ Com Port Setup (Windows)
 -find your installed Arduino IDE location. ie C:\XXXX\Arduino-1.8.13\arduino-1.8.13\drivers The drivers folder is the one you want
 -click next
 -in the Arduino IDE the com port should now appear
+'![port_1](https://user-images.githubusercontent.com/4991664/97712616-70d30f80-1a9d-11eb-9eb3-bb4c536409b7.png)
