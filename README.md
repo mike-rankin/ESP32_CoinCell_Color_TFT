@@ -21,5 +21,11 @@ Hardware on this dev board are:
 
 If  you decice to purchase this project from Tindie XXXXXX you get an assembled and tested board with coin cell holder not soldered in place along with a microJST cable to use with an external battery.
 
+Board setup instructions:
+-install the latest Arduino IDE
+-File/Preferences in Additional Boards Manager URLs add: https://dl.espressif.com/dl/package_esp32_index.json
+-Tools/Board/Board Manager install esp32
+-Tools/Board/ESP32 Arduino select ESP32 Dev Board
+
 
 
