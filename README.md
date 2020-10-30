@@ -24,7 +24,7 @@ If  you decice to purchase this project from Tindie XXXXXX you get an assembled 
 **Board setup instructions:<br/>**
 -install the latest Arduino IDE<br/>
 
-![Preferences](https://user-images.githubusercontent.com/4991664/97713039-0d95ad00-1a9e-11eb-9efd-cbce46f6fd33.png)<br/>
+![Preferences](https://user-images.githubusercontent.com/4991664/97713183-4170d280-1a9e-11eb-82ad-8573fa191bb2.png)<br/>
 
 
 -File/Preferences in Additional Boards Manager URLs add: https://dl.espressif.com/dl/package_esp32_index.json<br/>
