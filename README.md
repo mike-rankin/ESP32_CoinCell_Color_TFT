@@ -23,9 +23,9 @@ If  you decice to purchase this project from Tindie XXXXXX you get an assembled 
 
 Board setup instructions:
 
--install the latest Arduino IDE
--File/Preferences in Additional Boards Manager URLs add: https://dl.espressif.com/dl/package_esp32_index.json
--Tools/Board/Board Manager install esp32
+-install the latest Arduino IDE<br/>
+-File/Preferences in Additional Boards Manager URLs add: https://dl.espressif.com/dl/package_esp32_index.json<br/>
+-Tools/Board/Board Manager install esp32<br/>
 -Tools/Board/ESP32 Arduino select ESP32 Dev Board
 
 
