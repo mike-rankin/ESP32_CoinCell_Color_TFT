@@ -39,6 +39,7 @@ Com Port Setup (Windows)
 -select the new com port for your board
 -if the com port does not appear in Windows type Device Manager
 -right click on CP2104 USB to UART Bridge Controller and Properties
+![port](https://user-images.githubusercontent.com/4991664/97712525-500aba00-1a9d-11eb-99e5-8d06dfd3c323.png)
 -click Driver, Update Driver, Browse my computer for driver software
 -find your installed Arduino IDE location. ie C:\XXXX\Arduino-1.8.13\arduino-1.8.13\drivers The drivers folder is the one you want
 -click next
