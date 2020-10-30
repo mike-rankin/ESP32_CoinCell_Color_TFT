@@ -36,6 +36,8 @@ If  you decice to purchase this project from Tindie XXXXXX you get an assembled 
 
 
 ![port](https://user-images.githubusercontent.com/4991664/97712525-500aba00-1a9d-11eb-99e5-8d06dfd3c323.png)<br/>
+
+
 -click Driver, Update Driver, Browse my computer for driver software<br/>
 -find your installed Arduino IDE location. ie C:\XXXX\Arduino-1.8.13\arduino-1.8.13\drivers The drivers folder is the one you want<br/>
 -click next<br/>
