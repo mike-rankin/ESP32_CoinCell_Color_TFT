@@ -27,5 +27,19 @@ If  you decice to purchase this project from Tindie XXXXXX you get an assembled 
 -Tools/Board/Board Manager install esp32<br/>
 -Tools/Board/ESP32 Arduino select ESP32 Dev Board
 
+** Com Port Setup **
+-install the latest Arduino IDE
+-File/Preferences in Additional Boards Manager URLs add: https://dl.espressif.com/dl/package_esp32_index.json
+-Tools/Board/Board Manager install esp32
+-Tools/Board/ESP32 Arduino select ESP32 Dev Board
 
-
+Com Port Setup (Windows)
+-using a microUSB cable, plug the board into your computer
+-in the Arduino IDE Tools/Port
+-select the new com port for your board
+-if the com port does not appear in Windows type Device Manager
+-right click on CP2104 USB to UART Bridge Controller and Properties
+-click Driver, Update Driver, Browse my computer for driver software
+-find your installed Arduino IDE location. ie C:\XXXX\Arduino-1.8.13\arduino-1.8.13\drivers The drivers folder is the one you want
+-click next
+-in the Arduino IDE the com port should now appear
