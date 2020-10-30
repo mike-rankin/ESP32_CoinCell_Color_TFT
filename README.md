@@ -33,9 +33,13 @@ If  you decice to purchase this project from Tindie XXXXXX you get an assembled 
 -select the new com port for your board<br/>
 -if the com port does not appear in Windows type Device Manager<br/>
 -right click on CP2104 USB to UART Bridge Controller and Properties<br/>
+
+
 ![port](https://user-images.githubusercontent.com/4991664/97712525-500aba00-1a9d-11eb-99e5-8d06dfd3c323.png)<br/>
 -click Driver, Update Driver, Browse my computer for driver software<br/>
 -find your installed Arduino IDE location. ie C:\XXXX\Arduino-1.8.13\arduino-1.8.13\drivers The drivers folder is the one you want<br/>
 -click next<br/>
 -in the Arduino IDE the com port should now appear<br/>
+
+
 '![port_1](https://user-images.githubusercontent.com/4991664/97712616-70d30f80-1a9d-11eb-9eb3-bb4c536409b7.png)<br/>
