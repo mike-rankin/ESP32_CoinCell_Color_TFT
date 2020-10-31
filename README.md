@@ -54,6 +54,8 @@ If  you decice to purchase this project from Tindie XXXXXX you get an assembled 
 The board can be powered over usb, a LIR2450 rechargable coincell or an external LiPo battery. By default the charger resistor has a XXX soldered in place that delivers XXXmA for charging the coincell. It is recommended to replace R? with a different value depending on your battery.
 
 ![bat1](https://user-images.githubusercontent.com/4991664/97786221-00a1b800-1b89-11eb-8932-457851637462.jpg)
+![bat2](https://user-images.githubusercontent.com/4991664/97786231-11522e00-1b89-11eb-96c9-2b40d9ed90e7.jpg)
+![bat3](https://user-images.githubusercontent.com/4991664/97786233-11eac480-1b89-11eb-90e0-d3001172bca1.jpg)
 
 
 
