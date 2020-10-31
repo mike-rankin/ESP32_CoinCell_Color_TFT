@@ -59,7 +59,7 @@ The board can be powered over usb, a LIR2450 rechargable coincell or an external
 ![charger](https://user-images.githubusercontent.com/4991664/97786294-537b6f80-1b89-11eb-9efa-a9e21272d6ee.png)<br/>
 
 It is recommended to replace R4 with a different value depending on the capacity of your battery calculated with this equation.<br/>
-![resistor](https://user-images.githubusercontent.com/4991664/97786463-7eb28e80-1b8a-11eb-8905-7eba92efdca3.png)<br/>
+![resistor](https://user-images.githubusercontent.com/4991664/97786558-25972a80-1b8b-11eb-983f-9bfc1c6ad737.png)
 
 If you are a developer and require a custom board of a different size of require different sensors then just let me know at 0miker0@gmail.com
 
