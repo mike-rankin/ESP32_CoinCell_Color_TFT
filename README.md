@@ -57,6 +57,7 @@ The board can be powered over usb, a LIR2450 rechargable coincell or an external
 ![bat2](https://user-images.githubusercontent.com/4991664/97786292-52e2d900-1b89-11eb-8338-011f999aaecd.jpg)
 ![bat3](https://user-images.githubusercontent.com/4991664/97786293-537b6f80-1b89-11eb-87bd-dc4ca9a4fef4.jpg)
 ![charger](https://user-images.githubusercontent.com/4991664/97786294-537b6f80-1b89-11eb-9efa-a9e21272d6ee.png)
+![resistor](https://user-images.githubusercontent.com/4991664/97786463-7eb28e80-1b8a-11eb-8905-7eba92efdca3.png)
 
 
 
