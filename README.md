@@ -51,7 +51,7 @@ If  you decice to purchase this project from Tindie XXXXXX you get an assembled 
 '![port_1](https://user-images.githubusercontent.com/4991664/97712616-70d30f80-1a9d-11eb-9eb3-bb4c536409b7.png)<br/>
 
 **Powering the board<br/>**
-The board can be powered over usb, a LIR2450 rechargable coincell or an external LiPo battery. By default the charger resistor has a XXX soldered in place that delivers XXXmA for charging the coincell. It is recommended to replace R? with a different value depending on your battery.
+The board can be powered over usb, a LIR2450 rechargable coincell or an external LiPo battery. By default the charger resistor R4 has a 43K soldered in place that delivers 25mA for charging the coincell. It is recommended to replace R4 with a different value depending on the capacity of your battery.
 
 ![bat1](https://user-images.githubusercontent.com/4991664/97786295-537b6f80-1b89-11eb-98f8-4ae383f3db22.jpg)
 ![bat2](https://user-images.githubusercontent.com/4991664/97786292-52e2d900-1b89-11eb-8338-011f999aaecd.jpg)
