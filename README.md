@@ -21,7 +21,7 @@ Hardware design instead of software is my strength so at this state the only a f
 -LiPo charger (SL4054ST25P)<br/>
 -USB interface (CP2104N)<br/>
 
-If  you decice to purchase this project from Tindie XXXXXX you get an assembled and tested board with coin cell holder not soldered in place along with a microJST cable to use with an external battery.
+If  you decice to purchase this project from Tindie https://www.tindie.com/products/miker/esp32-iot-color-coincell/ you get an assembled and tested board with coin cell holder not soldered in place along with a microJST cable to use with an external battery.
 
 **Board setup instructions:<br/>**
 -install the latest Arduino IDE<br/>
