@@ -1,3 +1,18 @@
+/*
+-Tools/Board/"ESP32 Dev Module"
+
+-Sketch/Include Library/Manage Libraries/  search for and install these:
+ Adafruit_VL53L0X.h
+ bb_spi_lcd.h
+ WiFi.h
+ Wire.h
+ BitBang_I2C.h
+ BLEDevice.h
+ esp32_gamepad.h
+
+-Tools/Partition Scheme: "No OTA (2MB APP/2MB SPIFFS):
+*/
+
 #include "Adafruit_VL53L0X.h"
 #include <bb_spi_lcd.h>
 #include <WiFi.h>
