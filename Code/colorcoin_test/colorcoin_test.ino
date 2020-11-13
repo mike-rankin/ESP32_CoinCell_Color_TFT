@@ -11,6 +11,7 @@ BLEScanResults foundDevices;
 static uint8_t txBuffer[4096];
 SS_GAMEPAD gp;
 BBI2C i2c;
+SPILCD lcd;
 uint8_t devAddr[6];
 volatile bool bChanged, bConnected;
 
@@ -152,24 +153,24 @@ void TryConnect(void)
 {
 int counter = 0; 
 
-  spilcdFill(0,1);
+  spilcdFill(&lcd, 0,DRAW_TO_LCD);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED && WiFi.status() != WL_CONNECT_FAILED) //if not connected to wifi
   {
-   spilcdWriteString(0,0,(char *)"Connecting to wifi", 0xffff,0, FONT_NORMAL, 1);
-   spilcdWriteString(counter*8,8,(char *)".", 0xffff, 0, FONT_NORMAL, 1);
+   spilcdWriteString(&lcd, 0,0,(char *)"Connecting to wifi", 0xffff,0, FONT_8x8, DRAW_TO_LCD);
+   spilcdWriteString(&lcd, counter*8,8,(char *)".", 0xffff, 0, FONT_8x8, DRAW_TO_LCD);
    delay(1500);
    counter++;
 
    if (counter > 20)
    {
-    spilcdWriteString(0,16,(char *)"Failed", 0xf800, 0, FONT_NORMAL, 1);
+    spilcdWriteString(&lcd, 0,16,(char *)"Failed", 0xf800, 0, FONT_8x8, DRAW_TO_LCD);
     break;
    }
 
    if (WiFi.status() == WL_CONNECTED)  //if it connects to wifi
    {
-    spilcdWriteString(0,16,(char *)"Connected!", 0x6e0,0,FONT_NORMAL, 1);
+    spilcdWriteString(&lcd, 0,16,(char *)"Connected!", 0x6e0,0,FONT_8x8, DRAW_TO_LCD);
     IPAddress myIP = WiFi.softAPIP();
 //    display.println(myIP);
 //    display.print("RSSI:");
@@ -188,14 +189,14 @@ char szTemp[32];
 uint8_t i;
 int iDevice, iCount;
 
-  spilcdFill(0, 1);
+  spilcdFill(&lcd, 0, DRAW_TO_LCD);
   iCount = 0;
-  spilcdWriteString(0,0,(char *)"Starting I2C Scan...", 0xffff,0,FONT_NORMAL, 1);
+  spilcdWriteString(&lcd, 0,0,(char *)"Starting I2C Scan...", 0xffff,0,FONT_8x8, DRAW_TO_LCD);
   I2CScan(&i2c, map); // get bitmap of connected I2C devices
   if (map[0] == 0xfe) // something is wrong with the I2C bus
   {
-    spilcdWriteString(0,8,(char *)"I2C pins are not correct", 0xf800,0,FONT_NORMAL,1);
-    spilcdWriteString(0,16,(char *)"or bad device; scan failed", 0xf800,0,FONT_NORMAL,1);
+    spilcdWriteString(&lcd, 0,8,(char *)"I2C pins are not correct", 0xf800,0,FONT_8x8,DRAW_TO_LCD);
+    spilcdWriteString(&lcd, 0,16,(char *)"or bad device; scan failed", 0xf800,0,FONT_8x8,DRAW_TO_LCD);
   }
   else
   {
@@ -206,13 +207,13 @@ int iDevice, iCount;
         iCount++;
         iDevice = I2CDiscoverDevice(&i2c, i);
         sprintf(szTemp, "Device at 0x%x: %s", i, szNames[iDevice]);
-        spilcdWriteString(0,iCount*8,szTemp, 0xf81f,0,FONT_SMALL,1);
+        spilcdWriteString(&lcd, 0,iCount*8,szTemp, 0xf81f,0,FONT_6x8,DRAW_TO_LCD);
       }
     } // for i
     sprintf(szTemp, "%d device(s) found", iCount);
-    spilcdWriteString(0,(iCount+1)*8,szTemp,0x6e0,0,FONT_NORMAL,1);
+    spilcdWriteString(&lcd, 0,(iCount+1)*8,szTemp,0x6e0,0,FONT_8x8,DRAW_TO_LCD);
   }
-  spilcdWriteString(0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_SMALL, 1);
+  spilcdWriteString(&lcd, 0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_6x8, DRAW_TO_LCD);
   while (GetButtons() != 0) // wait until any pressed are released
   { };
   
@@ -270,9 +271,9 @@ int i;
 uint16_t usColor;
 char szTemp[16];
 
-  spilcdFill(0,1);
-  spilcdWriteString(36,0,(char *)"Button Test", 0xffff,0,FONT_NORMAL, 1);
-  spilcdWriteString(8,72,(char *)"Press 2 buttons to exit", 0xffff,0,FONT_SMALL, 1);
+  spilcdFill(&lcd, 0,DRAW_TO_LCD);
+  spilcdWriteString(&lcd, 36,0,(char *)"Button Test", 0xffff,0,FONT_8x8, DRAW_TO_LCD);
+  spilcdWriteString(&lcd, 8,72,(char *)"Press 2 buttons to exit", 0xffff,0,FONT_6x8, DRAW_TO_LCD);
   while (iCount < 2)
   {
     iButts = GetButtons() >> 8; // get the currently pressed bits
@@ -289,7 +290,7 @@ char szTemp[16];
         usColor = 0x6e0; // green for not pressed
       }
       sprintf(szTemp, "T%d", i+1);
-      spilcdWriteString(i*40,24,szTemp,usColor,0,FONT_LARGE,1);
+      spilcdWriteString(&lcd, i*40,24,szTemp,usColor,0,FONT_16x32,DRAW_TO_LCD);
       iButts >>= 1;
     } // for i
   }
@@ -315,31 +316,31 @@ uint16_t pal[4] = {0xffe0,0xf81f,0x1f,0xffff};
     }
   }
   iFG = 0xffff; iBG = 0x6e0;
-  spilcdRectangle(0, 0, WIDTH, HEIGHT, 0x0000, 0xf800, 1, 0);
-  spilcdWriteString(44,0,(char *)"Main Menu", 0x6ff,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,16,(char *)"I2C Scan", (iMenuItem == 0) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,24,(char *)"WiFi Scan", (iMenuItem == 1) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,32,(char *)"BLE Scan", (iMenuItem == 2) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,40,(char *)"Button Test", (iMenuItem == 3) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,48,(char *)"Proximity Test", (iMenuItem == 4) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,56,(char *)"IMU Test", (iMenuItem == 5) ? iFG:iBG,-1,FONT_NORMAL, 0);
-  spilcdWriteString(0,64,(char *)"Temp/Humidity Test", (iMenuItem == 6) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdRectangle(&lcd, 0, 0, WIDTH, HEIGHT, 0x0000, 0xf800, 1, DRAW_TO_RAM);
+  spilcdWriteString(&lcd, 44,0,(char *)"Main Menu", 0x6ff,-1,FONT_8x8, DRAW_TO_RAM);
+  spilcdWriteString(&lcd, 0,16,(char *)"I2C Scan", (iMenuItem == 0) ? iFG:iBG,-1,FONT_8x8, DRAW_TO_RAM);
+  spilcdWriteString(&lcd, 0,24,(char *)"WiFi Scan", (iMenuItem == 1) ? iFG:iBG,-1,FONT_8x8, DRAW_TO_RAM);
+  spilcdWriteString(&lcd, 0,32,(char *)"BLE Scan", (iMenuItem == 2) ? iFG:iBG,-1,FONT_8x8, DRAW_TO_RAM);
+  spilcdWriteString(&lcd, 0,40,(char *)"Button Test", (iMenuItem == 3) ? iFG:iBG,-1,FONT_8x8, DRAW_TO_RAM);
+  spilcdWriteString(&lcd, 0,48,(char *)"Proximity Test", (iMenuItem == 4) ? iFG:iBG,-1,FONT_8x8, DRAW_TO_RAM);
+  spilcdWriteString(&lcd, 0,56,(char *)"IMU Test", (iMenuItem == 5) ? iFG:iBG,-1,FONT_8x8, DRAW_TO_RAM);
+  spilcdWriteString(&lcd, 0,64,(char *)"Temp/Humidity Test", (iMenuItem == 6) ? iFG:iBG,-1,FONT_8x8, DRAW_TO_RAM);
   if (bConnected)
      pGP = (char *)"Gamepad: disconnect";
   else
      pGP = (char *)"Gamepad: connect";
-  spilcdWriteString(0,72,pGP, (iMenuItem == 7) ? iFG:iBG,-1,FONT_NORMAL, 0);
+  spilcdWriteString(&lcd, 0,72,pGP, (iMenuItem == 7) ? iFG:iBG,-1,FONT_8x8, DRAW_TO_RAM);
   spilcdRotateBitmap(ucBombMask, u8Temp, 1, 40, 40, 8, 20, 20, i % 360);
   for (j=0; j<4; j++)
   {
-    spilcdDrawPattern(u8Temp, 8, x[j], y[j],40,40,pal[j],16);
+    spilcdDrawPattern(&lcd, u8Temp, 8, x[j], y[j],40,40,pal[j],16);
     x[j] += dx[j]; y[j] += dy[j];
     if (x[j] <= 0 || x[j] >= WIDTH-40)
        dx[j] = -dx[j];
     if (y[j] <= 0 || y[j] >= HEIGHT-40)
        dy[j] = -dy[j];
   }
-  spilcdShowBuffer(0,0,WIDTH,HEIGHT);
+  spilcdShowBuffer(&lcd, 0,0,WIDTH,HEIGHT, DRAW_TO_LCD);
   i++; 
 } /* DrawMainMenu() */
 
@@ -359,10 +360,10 @@ struct Grain {
 void ResetGrains(int bRandom)
 {
 int i, j, x, y;
-uint16_t *pBitmap = spilcdGetBuffer();
+uint16_t *pBitmap = spilcdGetBuffer(&lcd);
 uint16_t color, Pal[] = {0xf800,0xffff,0xffe0,0xf81f,0x1f,0x6e0,0x6ff,0xaaaa};
 
-  spilcdFill(0, 1);
+  spilcdFill(&lcd, 0, DRAW_TO_LCD | DRAW_TO_RAM);
   if (bRandom)
   {
     for(i=0; i<N_GRAINS; i++) {  // For each sand grain...
@@ -377,22 +378,22 @@ uint16_t color, Pal[] = {0xf800,0xffff,0xffe0,0xf81f,0x1f,0x6e0,0x6ff,0xaaaa};
       // because the display is rotated 90
       grain[i].vx = grain[i].vy = 0; // Initial velocity is zero
       grain[i].color = Pal[random(7)];
-      pBitmap[(x*HEIGHT) + (HEIGHT-1-y)] = grain[i].color; // Mark it
+      pBitmap[x + (y*WIDTH)] = grain[i].color; // Mark it
     }
   } // random
   else
   {
-    spilcdWriteString(40,28,(char *)"C",0xf800,0,FONT_LARGE,1);
-    spilcdWriteString(56,28,(char *)"O",0x6e0,0,FONT_LARGE,1);
-    spilcdWriteString(72,28,(char *)"L",0x1f,0,FONT_LARGE,1);
-    spilcdWriteString(88,28,(char *)"O",0xf81f,0,FONT_LARGE,1);
-    spilcdWriteString(104,28,(char *)"R",0xffe0,0,FONT_LARGE,1);
+    spilcdWriteString(&lcd, 40,28,(char *)"C",0xf800,0,FONT_16x32,DRAW_TO_LCD | DRAW_TO_RAM);
+    spilcdWriteString(&lcd, 56,28,(char *)"O",0x6e0,0,FONT_16x32,DRAW_TO_LCD | DRAW_TO_RAM);
+    spilcdWriteString(&lcd, 72,28,(char *)"L",0x1f,0,FONT_16x32,DRAW_TO_LCD | DRAW_TO_RAM);
+    spilcdWriteString(&lcd, 88,28,(char *)"O",0xf81f,0,FONT_16x32,DRAW_TO_LCD | DRAW_TO_RAM);
+    spilcdWriteString(&lcd, 104,28,(char *)"R",0xffe0,0,FONT_16x32,DRAW_TO_LCD | DRAW_TO_RAM);
     i = 0;
     for (y=0; y<HEIGHT; y++)
     {
       for (x=0; x<WIDTH; x++)
       {
-        color = pBitmap[(x*HEIGHT)+(HEIGHT-1-y)];
+        color = pBitmap[x + (y*WIDTH)];
         if (color != 0) // pixel set?
         {
           grain[i].x = x*256; grain[i].y = y*256;
@@ -418,9 +419,9 @@ int16_t ax, ay, az;
 signed int        newx, newy;
 signed int        x1, y1, x2, y2;
 int i;
-uint16_t *pBitmap = spilcdGetBuffer();
+uint16_t *pBitmap = spilcdGetBuffer(&lcd);
 uint16_t u16Flags[5]; // divide the display into 16x16 blocks for quicker refresh
-int iFrame = 0;
+int iTick, iFrame = 0;
 
   ResetGrains(0);
   delay(2000);
@@ -433,10 +434,10 @@ int iFrame = 0;
       if (GetButtons())
        return;
     }
-    if (iFrame & 1) // update display if we didn't check the buttons
-    {
-      spilcdShowBuffer(0,0,WIDTH,HEIGHT);
-    }
+//    if (iFrame & 1) // update display if we didn't check the buttons
+//    {
+//      spilcdShowBuffer(&lcd, 0,0,WIDTH,HEIGHT, DRAW_TO_LCD);
+//    }
     if (bConnected) // use the left analog stick to simulate gravity
     {
       ax = gp.iLJoyX / 4;
@@ -462,11 +463,19 @@ int iFrame = 0;
   // velocity to 5/8 of it's value. This is a reasonable approximation since the maximum
   // velocity impulse from the accelerometer is +/-64 (16384 / 256) and it gets added every frame
   //
+  spilcdSetPosition(&lcd, 0, 0, WIDTH, HEIGHT, DRAW_TO_LCD);
+  iTick = 0;
   for(i=0; i<N_GRAINS; i++) {
+    iTick++;
+    if (iTick == 9) // update the display
+    {
+      spilcdWriteDataBlock(&lcd, (uint8_t *)&pBitmap[(i/9)*WIDTH], WIDTH*2, DRAW_TO_LCD | DRAW_WITH_DMA);
+      iTick = 0;
+    }
     grain[i].vx += ax;// + random(5); // Add a little random impulse to each grain
     grain[i].vy += ay;// + random(5);
     v2 = (int32_t)(grain[i].vx*grain[i].vx) + (int32_t)(grain[i].vy*grain[i].vy);
-    if (v2 >= 65536) // too big, trim it
+    if (v2 >= 400000) // too big, trim it
     {
       grain[i].vx = (grain[i].vx * 5)/8; // quick and dirty way to avoid doing a 'real' divide
       grain[i].vy = (grain[i].vy * 5)/8;
@@ -510,16 +519,16 @@ int iFrame = 0;
     x1 = grain[i].x / 256; y1 = grain[i].y / 256; // old position
     x2 = newx / 256; y2 = newy / 256;
     if((x1 != x2 || y1 != y2) && // If grain is moving to a new pixel...
-        (pBitmap[(x2*HEIGHT)+(HEIGHT-1-y2)] != 0)) {       // but if that pixel is already occupied...
+        (pBitmap[x2 + (y2*WIDTH)] != 0)) {       // but if that pixel is already occupied...
         // Try skidding along just one axis of motion if possible (start w/faster axis)
         if(abs(grain[i].vx) > abs(grain[i].vy)) { // X axis is faster
           y2 = grain[i].y / 256;
-          if(pBitmap[(x2*HEIGHT)+(HEIGHT-1-y2)] == 0) { // That pixel's free!  Take it!  But...
+          if(pBitmap[x2 + (y2*WIDTH)] == 0) { // That pixel's free!  Take it!  But...
             newy         = grain[i].y; // Cancel Y motion
             grain[i].vy = (grain[i].vy /-2) + random(8);         // and bounce Y velocity
           } else { // X pixel is taken, so try Y...
             y2 = newy / 256; x2 = grain[i].x / 256;
-            if(pBitmap[(x2*HEIGHT)+(HEIGHT-1-y2)] == 0) { // Pixel is free, take it, but first...
+            if(pBitmap[x2 + (y2*WIDTH)] == 0) { // Pixel is free, take it, but first...
               newx         = grain[i].x; // Cancel X motion
               grain[i].vx = (grain[i].vx /-2) + random(8);         // and bounce X velocity
             } else { // Both spots are occupied
@@ -531,12 +540,12 @@ int iFrame = 0;
           }
         } else { // Y axis is faster
           y2 = newy / 256; x2 = grain[i].x / 256;
-          if(pBitmap[(x2*HEIGHT)+(HEIGHT-1-y2)] == 0) { // Pixel's free!  Take it!  But...
+          if(pBitmap[x2 + (y2*WIDTH)] == 0) { // Pixel's free!  Take it!  But...
             newx         = grain[i].x; // Cancel X motion
             grain[i].vx = (grain[i].vx /-2) + random(8);        // and bounce X velocity
           } else { // Y pixel is taken, so try X...
             y2 = grain[i].y / 256; x2 = newx / 256;
-            if(pBitmap[(x2*HEIGHT)+(HEIGHT-1-y2)] == 0) { // Pixel is free, take it, but first...
+            if(pBitmap[x2 + (y2*WIDTH)] == 0) { // Pixel is free, take it, but first...
               newy         = grain[i].y; // Cancel Y motion
               grain[i].vy = (grain[i].vy /-2) + random(8);        // and bounce Y velocity
             } else { // Both spots are occupied
@@ -553,8 +562,8 @@ int iFrame = 0;
     y2 = newy / 256; x2 = newx / 256;
     if (x1 != x2 || y1 != y2)
     {
-      pBitmap[(x1*HEIGHT)+(HEIGHT-1-y1)] = 0; // erase old pixel
-      pBitmap[(x2*HEIGHT)+(HEIGHT-1-y2)] = grain[i].color;  // Set new pixel
+      pBitmap[x1 + (y1*WIDTH)] = 0; // erase old pixel
+      pBitmap[x2 + (y2*WIDTH)] = grain[i].color;  // Set new pixel
     }
   } // for i
   } // while (1)
@@ -569,8 +578,8 @@ void TempTest(void)
     uint8_t ucTemp[4];
     uint32_t T, H;
     temp_addr = 0x40;
-    spilcdFill(0,1);
-    spilcdWriteString(0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_SMALL, 1);
+    spilcdFill(&lcd, 0,DRAW_TO_LCD);
+    spilcdWriteString(&lcd, 0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_6x8, DRAW_TO_LCD);
     // configure it
     ucTemp[0] = 0x02; // config register
     ucTemp[1] = 0x10; // temp+humidity, 14-bit resolution
@@ -590,16 +599,16 @@ void TempTest(void)
       T = ((T * 1650) >> 16) - 400; // 10x temp
       T -= 84; // adjustment that seems to give a more accurate result
       sprintf(szTemp,"Humidity: %d%%", H); // display humidity value
-      spilcdWriteString(0,0,szTemp,0xffff,0,FONT_NORMAL,1);
+      spilcdWriteString(&lcd, 0,0,szTemp,0xffff,0,FONT_8x8,DRAW_TO_LCD);
       sprintf(szTemp,"Air Temp = %d.%dC", (int)(T/10), (int)(T % 10)); // display temperature value
-      spilcdWriteString(0,8,szTemp,0xffff,0,FONT_NORMAL, 1);
+      spilcdWriteString(&lcd, 0,8,szTemp,0xffff,0,FONT_8x8, DRAW_TO_LCD);
       T = temprature_sens_read();
       if (T == 128) // invalid, must not be present
-         spilcdWriteString(0,16,(char *)"CPU Temp = N/A", 0xffff,0,FONT_NORMAL,1);
+         spilcdWriteString(&lcd, 0,16,(char *)"CPU Temp = N/A", 0xffff,0,FONT_8x8,DRAW_TO_LCD);
       else
       {
         sprintf(szTemp,"CPU Temp = %dF", T); // display CPU temperature
-        spilcdWriteString(0,16,szTemp,0xffff,0,FONT_NORMAL, 1);
+        spilcdWriteString(&lcd, 0,16,szTemp,0xffff,0,FONT_8x8, DRAW_TO_LCD);
       }
     }
 } /* TempTest() */
@@ -611,8 +620,8 @@ VL53L0X_RangingMeasurementData_t measure;
 int iFrame = 0;
 int16_t butts = 0;
 
-  spilcdFill(0,1); // fill to black
-  spilcdWriteString(0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_SMALL, 1);
+  spilcdFill(&lcd, 0,DRAW_TO_LCD); // fill to black
+  spilcdWriteString(&lcd, 0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_6x8, DRAW_TO_LCD);
   while (1)
   {
     iFrame++;
@@ -621,7 +630,7 @@ int16_t butts = 0;
     if ((butts & 0xff) != 0) return; // exit at first button press
     vlx.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
     sprintf(szTemp, "Dist = %03dmm", measure.RangeMilliMeter);
-    spilcdWriteString(0,0,szTemp, 0xf81f, 0, FONT_LARGE, 1);
+    spilcdWriteString(&lcd, 0,0,szTemp, 0xf81f, 0, FONT_16x32, DRAW_TO_LCD);
   }
 } /* TOFTest() */
 
@@ -634,8 +643,8 @@ int ssidRSSI[MAX_APS];
 int i, n;
 char szTemp[64];
 
-  spilcdFill(0, 1);
-  spilcdWriteString(0,0,(char *)"Scanning Wifi...", 0xffff,0,FONT_NORMAL, 1);
+  spilcdFill(&lcd, 0, DRAW_TO_LCD);
+  spilcdWriteString(&lcd, 0,0,(char *)"Scanning Wifi...", 0xffff,0,FONT_8x8, DRAW_TO_LCD);
 
   // Find nearby networks (up to 9)
   WiFi.mode(WIFI_STA);
@@ -650,17 +659,17 @@ char szTemp[64];
   if (n > MAX_APS)
     strcat(szTemp, (char *)" (showing top 8)");
   if (n > MAX_APS) n = MAX_APS; // we only care about the N strongest
-  spilcdFill(0,1);
-  spilcdWriteString(0,0,szTemp, 0xffff,0, FONT_NORMAL, 1);
+  spilcdFill(&lcd, 0,DRAW_TO_LCD);
+  spilcdWriteString(&lcd, 0,0,szTemp, 0xffff,0, FONT_8x8, DRAW_TO_LCD);
   for (i = 0; i < n; ++i)
   {
      ssidList[i] = WiFi.SSID(i);
      ssidEncrypt[i] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
      ssidRSSI[i] = WiFi.RSSI(i);
      sprintf(szTemp, "%s, %c, %ddBm", ssidList[i].c_str(), (ssidEncrypt[i]) ? '*':' ',ssidRSSI[i]);
-     spilcdWriteString(0,8+(i*8), szTemp, 0x6e0,0,FONT_SMALL, 1);
+     spilcdWriteString(&lcd, 0,8+(i*8), szTemp, 0x6e0,0,FONT_6x8, DRAW_TO_LCD);
   } // for each ssid found
-  spilcdWriteString(0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_SMALL, 1);
+  spilcdWriteString(&lcd, 0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_6x8, DRAW_TO_LCD);
   while (GetButtons() == 0)
   {
     delay(10);
@@ -693,8 +702,8 @@ char szTemp[64];
 int i;
 
   iBLECount = 0;
-  spilcdFill(0, 1);
-  spilcdWriteString(0,0,(char *)"Scanning for BLE... ", 0xffff,0,FONT_NORMAL, 1);
+  spilcdFill(&lcd, 0, DRAW_TO_LCD);
+  spilcdWriteString(&lcd, 0,0,(char *)"Scanning for BLE... ", 0xffff,0,FONT_8x8, DRAW_TO_LCD);
 
   BLEDevice::init("");
   pBLEScan = BLEDevice::getScan(); //create new scan
@@ -702,14 +711,14 @@ int i;
   pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
   foundDevices = pBLEScan->start(10); // scan for 10 seconds
   sprintf(szTemp, "%d device(s) found  ", iBLECount);
-  spilcdWriteString(0,0,szTemp, 0xffff,0,FONT_NORMAL, 1);
+  spilcdWriteString(&lcd, 0,0,szTemp, 0xffff,0,FONT_8x8, DRAW_TO_LCD);
   for (i=0; i<iBLECount; i++)
   {
     sprintf(szTemp, "%s,%s", Scanned_BLE_Address[i], Scanned_BLE_Name[i]);
-    spilcdWriteString(0,(i+1)*8,szTemp, 0x6e0,0,FONT_SMALL, 1);
+    spilcdWriteString(&lcd, 0,(i+1)*8,szTemp, 0x6e0,0,FONT_6x8, DRAW_TO_LCD);
   }
   pBLEScan->stop(); // stop scanning
-  spilcdWriteString(0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_SMALL, 1);
+  spilcdWriteString(&lcd, 0,72,(char *)"Press any button to exit", 0xffe0,0,FONT_6x8, DRAW_TO_LCD);
   while (GetButtons() == 0)
   {
     delay(10);
@@ -725,21 +734,21 @@ void Gamepad(void)
   }
   else // connect it
   {
-    spilcdFill(0,1);
-    spilcdWriteString(0,0,(char *)"Starting discovery...", 0xffff, 0, FONT_NORMAL, 1);
+    spilcdFill(&lcd, 0, DRAW_TO_LCD | DRAW_TO_RAM);
+    spilcdWriteString(&lcd, 0,0,(char *)"Starting discovery...", 0xffff, 0, FONT_8x8, DRAW_TO_LCD);
     if (SS_Scan(6, devAddr))
     {    
-      spilcdWriteString(0,16,(char *)"SS found!", 0x6e0, 0, FONT_STRETCHED, 1);
+      spilcdWriteString(&lcd, 0,16,(char *)"SS found!", 0x6e0, 0, FONT_16x16, DRAW_TO_LCD);
       if (SS_Connect(devAddr))
       {
-        spilcdWriteString(0,32,(char *)"Connected!", 0x6e0, 0, FONT_STRETCHED, 1);
+        spilcdWriteString(&lcd, 0,32,(char *)"Connected!", 0x6e0, 0, FONT_16x16, DRAW_TO_LCD);
       }
       else
-        spilcdWriteString(0,32,(char *)"Not Connected", 0xf800, 0, FONT_STRETCHED, 1);
+        spilcdWriteString(&lcd, 0,32,(char *)"Not Connected", 0xf800, 0, FONT_16x16, DRAW_TO_LCD);
     }
     else
     {
-      spilcdWriteString(0,16,(char *)"Not found", 0xf800, 0, FONT_STRETCHED, 1);
+      spilcdWriteString(&lcd, 0,16,(char *)"Not found", 0xf800, 0, FONT_16x16, DRAW_TO_LCD);
     }    
     delay(2000);
   }
@@ -829,9 +838,9 @@ void setup() {
   LIS3DHInit(0x19);
   vlx.begin();
   spilcdSetTXBuffer(txBuffer, 4096);
-  spilcdInit(LCD_ST7735S_B, 1, 1, 0, 32000000, 4, 21, 22, 26, -1, 23, 18); // Mike's coin cell pin numbering
-  spilcdSetOrientation(LCD_ORIENTATION_ROTATED);
-  spilcdAllocBackbuffer();
+  spilcdInit(&lcd, LCD_ST7735S_B, FLAGS_INVERT | FLAGS_SWAP_RB, 32000000, 4, 21, 22, 26, -1, 23, 18); // Mike's coin cell pin numbering
+  spilcdSetOrientation(&lcd, LCD_ORIENTATION_90);
+  spilcdAllocBackbuffer(&lcd);
 //  touchAttachInterrupt(T7, gotTouch1, threshold);
 //  touchAttachInterrupt(T5, gotTouch2, threshold);
 //  touchAttachInterrupt(T3, gotTouch3, threshold);
@@ -887,22 +896,22 @@ uint16_t r, g, b, usColor1, usColor2;
       if (yLogo == 0 || yLogo == 155)
          yDelta = -yDelta;
 
-    spilcdRectangle(0, 0, WIDTH, HEIGHT, usColor1, usColor2, 1, 0);
-    spilcdWriteString(x,y,(char *)"Mike's Magical", 0xffff,-1,FONT_NORMAL, 0);
-    spilcdWriteString(x,y+8,(char *)"Color CoinCell!", 0xffff,-1,FONT_NORMAL, 0);
+    spilcdRectangle(&lcd, 0, 0, WIDTH, HEIGHT, usColor1, usColor2, 1, 0);
+    spilcdWriteString(&lcd, x,y,(char *)"Mike's Magical", 0xffff,-1,FONT_8x8, DRAW_TO_RAM);
+    spilcdWriteString(&lcd, x,y+8,(char *)"Color CoinCell!", 0xffff,-1,FONT_8x8, DRAW_TO_RAM);
 //void spilcdDrawPattern(uint8_t *pPattern, int iSrcPitch, int iDestX, int iDestY, int iCX, int iCY, uint16_t usColor, int iTranslucency);
-    spilcdDrawPattern(ucBombMask, 8, x+16,y,40,40,0x6e0,((y>>1)&31)+1);
-    spilcdDrawPattern(ucBombMask, 8, x+48,y,40,40,0xf800,((y>>1)&31)+1);
-    spilcdDrawPattern(ucBombMask, 8, x+80,y,40,40,0x1f,((y>>1)&31)+1);
+    spilcdDrawPattern(&lcd, ucBombMask, 8, x+16,y,40,40,0x6e0,((y>>1)&31)+1);
+    spilcdDrawPattern(&lcd, ucBombMask, 8, x+48,y,40,40,0xf800,((y>>1)&31)+1);
+    spilcdDrawPattern(&lcd, ucBombMask, 8, x+80,y,40,40,0x1f,((y>>1)&31)+1);
     {
       uint8_t u8Temp[8*40]; // holds the rotated mask
       spilcdRotateBitmap(ucBombMask, u8Temp, 1, 40, 40, 8, 20, 20, i % 360);
       j = i % 120;
-      spilcdDrawPattern(u8Temp, 8, j,0,40,40,0x6ff,16);
-      spilcdDrawPattern(u8Temp, 8, 120-j,0,40,40,0xf81f,16);
+      spilcdDrawPattern(&lcd, u8Temp, 8, j,0,40,40,0x6ff,16);
+      spilcdDrawPattern(&lcd, u8Temp, 8, 120-j,0,40,40,0xf81f,16);
     }
 //  spilcdDrawBMP((uint8_t *)ucLogoBMP, 8, yLogo, 0, 0, 0);
-  spilcdShowBuffer(0,0,WIDTH,HEIGHT);
+  spilcdShowBuffer(&lcd, 0,0,WIDTH,HEIGHT, DRAW_TO_LCD);
   if (i & 1) // change pos every other frame
   {
     x += dx; y += dy;
