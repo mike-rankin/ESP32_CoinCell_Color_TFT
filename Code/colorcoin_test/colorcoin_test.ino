@@ -421,7 +421,8 @@ signed int        x1, y1, x2, y2;
 int i;
 uint16_t *pBitmap = spilcdGetBuffer(&lcd);
 uint16_t u16Flags[5]; // divide the display into 16x16 blocks for quicker refresh
-int iTick, iFrame = 0;
+int iFrame = 0;
+uint32_t frac, ysum, oldy;
 
   ResetGrains(0);
   delay(2000);
@@ -464,23 +465,9 @@ int iTick, iFrame = 0;
   // velocity impulse from the accelerometer is +/-64 (16384 / 256) and it gets added every frame
   //
   spilcdSetPosition(&lcd, 0, 0, WIDTH, HEIGHT, DRAW_TO_LCD);
-  iTick = 0;
-  for(i=0; i<N_GRAINS; i++) {
-    iTick++;
-    if (iTick == 9) // update the display
-    {
-      spilcdWriteDataBlock(&lcd, (uint8_t *)&pBitmap[(i/9)*WIDTH], WIDTH*2, DRAW_TO_LCD | DRAW_WITH_DMA);
-      iTick = 0;
-    }
-    grain[i].vx += ax;// + random(5); // Add a little random impulse to each grain
-    grain[i].vy += ay;// + random(5);
-    v2 = (int32_t)(grain[i].vx*grain[i].vx) + (int32_t)(grain[i].vy*grain[i].vy);
-    if (v2 >= 400000) // too big, trim it
-    {
-      grain[i].vx = (grain[i].vx * 5)/8; // quick and dirty way to avoid doing a 'real' divide
-      grain[i].vy = (grain[i].vy * 5)/8;
-    }
-  } // for i
+  ysum = 0;
+  oldy = 0xffff;
+  frac = (HEIGHT * 65536) / N_GRAINS;
   // Update the position of each grain, one at a time, checking for
   // collisions and having them react.  This really seems like it shouldn't
   // work, as only one grain is considered at a time while the rest are
@@ -499,21 +486,36 @@ int iTick, iFrame = 0;
   // written to the display. This means calculating an offset and bit to test/set each pixel
   //
   for(i=0; i<N_GRAINS; i++) {
-    newx = grain[i].x + grain[i].vx; // New position in grain space
-    newy = grain[i].y + grain[i].vy;
+    int16_t vx, vy; // use local vars for more speed
+    ysum += frac;
+    if ((ysum >> 16) != oldy) // update the display
+    {
+      oldy = ysum >> 16;
+      spilcdWriteDataBlock(&lcd, (uint8_t *)&pBitmap[oldy*WIDTH], WIDTH*2, DRAW_TO_LCD | DRAW_WITH_DMA);
+    }
+    vx = grain[i].vx + ax;// + random(5); // Add a little random impulse to each grain
+    vy = grain[i].vy + ay;// + random(5);
+    v2 = (int32_t)(vx*vx) + (int32_t)(vy*vy);
+    if (v2 >= 400000) // too big, trim it
+    {
+      vx = (vx * 5)/8; // quick and dirty way to avoid doing a 'real' divide
+      vy = (vy * 5)/8;
+    }
+    newx = grain[i].x + vx; // New position in grain space
+    newy = grain[i].y + vy;
     if(newx > MAX_X) {               // If grain would go out of bounds
       newx         = MAX_X;          // keep it inside, and
-      grain[i].vx /= -2;             // give a slight bounce off the wall
+      vx /= -2;             // give a slight bounce off the wall
     } else if(newx < 0) {
       newx         = 0;
-      grain[i].vx /= -2;
+      vx /= -2;
     }
     if(newy > MAX_Y) {
       newy         = MAX_Y;
-      grain[i].vy /= -2;
+      vy /= -2;
     } else if(newy < 0) {
       newy         = 0;
-      grain[i].vy /= -2;
+      vy /= -2;
     }
 
     x1 = grain[i].x / 256; y1 = grain[i].y / 256; // old position
@@ -521,44 +523,46 @@ int iTick, iFrame = 0;
     if((x1 != x2 || y1 != y2) && // If grain is moving to a new pixel...
         (pBitmap[x2 + (y2*WIDTH)] != 0)) {       // but if that pixel is already occupied...
         // Try skidding along just one axis of motion if possible (start w/faster axis)
-        if(abs(grain[i].vx) > abs(grain[i].vy)) { // X axis is faster
+        if(abs(vx) > abs(vy)) { // X axis is faster
           y2 = grain[i].y / 256;
           if(pBitmap[x2 + (y2*WIDTH)] == 0) { // That pixel's free!  Take it!  But...
             newy         = grain[i].y; // Cancel Y motion
-            grain[i].vy = (grain[i].vy /-2) + random(8);         // and bounce Y velocity
+            vy = (vy /-2) + random(8);         // and bounce Y velocity
           } else { // X pixel is taken, so try Y...
             y2 = newy / 256; x2 = grain[i].x / 256;
             if(pBitmap[x2 + (y2*WIDTH)] == 0) { // Pixel is free, take it, but first...
               newx         = grain[i].x; // Cancel X motion
-              grain[i].vx = (grain[i].vx /-2) + random(8);         // and bounce X velocity
+              vx = (vx /-2) + random(8);         // and bounce X velocity
             } else { // Both spots are occupied
               newx         = grain[i].x; // Cancel X & Y motion
               newy         = grain[i].y;
-              grain[i].vx = (grain[i].vx /-2) + random(8);         // Bounce X & Y velocity
-              grain[i].vy = (grain[i].vy /-2) + random(8);
+              vx = (vx /-2) + random(8);         // Bounce X & Y velocity
+              vy = (vy /-2) + random(8);
             }
           }
         } else { // Y axis is faster
           y2 = newy / 256; x2 = grain[i].x / 256;
           if(pBitmap[x2 + (y2*WIDTH)] == 0) { // Pixel's free!  Take it!  But...
             newx         = grain[i].x; // Cancel X motion
-            grain[i].vx = (grain[i].vx /-2) + random(8);        // and bounce X velocity
+            vx = (vx /-2) + random(8);        // and bounce X velocity
           } else { // Y pixel is taken, so try X...
             y2 = grain[i].y / 256; x2 = newx / 256;
             if(pBitmap[x2 + (y2*WIDTH)] == 0) { // Pixel is free, take it, but first...
               newy         = grain[i].y; // Cancel Y motion
-              grain[i].vy = (grain[i].vy /-2) + random(8);        // and bounce Y velocity
+              vy = (vy /-2) + random(8);        // and bounce Y velocity
             } else { // Both spots are occupied
               newx         = grain[i].x; // Cancel X & Y motion
               newy         = grain[i].y;
-              grain[i].vx = (grain[i].vx /-2) + random(8);         // Bounce X & Y velocity
-              grain[i].vy = (grain[i].vy /-2) + random(8);
+              vx = (vx /-2) + random(8);         // Bounce X & Y velocity
+              vy = (vy /-2) + random(8);
             }
           }
         }
     }
     grain[i].x  = newx; // Update grain position
     grain[i].y  = newy; // possibly only a fractional change
+    grain[i].vx = vx;
+    grain[i].vy = vy;
     y2 = newy / 256; x2 = newx / 256;
     if (x1 != x2 || y1 != y2)
     {
@@ -566,6 +570,9 @@ int iTick, iFrame = 0;
       pBitmap[x2 + (y2*WIDTH)] = grain[i].color;  // Set new pixel
     }
   } // for i
+  // display the last line since the fractional sum won't reach it
+  spilcdWriteDataBlock(&lcd, (uint8_t *)&pBitmap[(HEIGHT-1)*WIDTH], WIDTH*2, DRAW_TO_LCD | DRAW_WITH_DMA);
+
   } // while (1)
 } /* IMUTest() */
 
